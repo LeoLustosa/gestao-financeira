@@ -1,6 +1,6 @@
 # 📊 FinApp - Sistema de Gestão Financeira Inteligente
 
-Bem-vindo ao **FinApp**, uma aplicação móvel completa de controlo e planeamento financeiro pessoal desenvolvida em **React Native (Expo Go)** no Frontend e **Node.js (Express + SQLite)** no Backend.
+Bem-vindo ao **FinApp**, uma aplicação móvel completa de controle e planejamento financeiro pessoal desenvolvida em **React Native (Expo Go)** no Frontend e **Node.js (Express + SQLite)** no Backend.
 
 Este repositório apresenta a solução estruturada para a avaliação prática da unidade curricular, contendo validações robustas com **Zod**, banco de dados relacional e sincronização em tempo real de estados.
 
@@ -24,7 +24,7 @@ Como este projeto está a ser avaliado através de um **Pull Request**, siga as 
 Abra o terminal no seu computador e execute os seguintes comandos:
 ```bash
 # Clone o repositório (substitua pelo link caso ainda não o tenha feito)
-git clone [https://github.com/seu-usuario/gestao-financeira.git](https://github.com/seu-usuario/gestao-financeira.git)
+git clone https://github.com/LeoLustosa/gestao-financeira.git
 
 # Aceda à pasta do projeto
 cd gestao-financeira
