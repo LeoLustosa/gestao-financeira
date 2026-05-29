@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { ArrowLeft, FileText, Calendar, Tag, RefreshCcw, Camera } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../services/api';
 
 export default function GerenciarDespesaScreen({ route, navigation }) {
@@ -11,8 +12,19 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
   const [type, setType] = useState(transacaoParaEditar?.category?.isIncome ? 'income' : 'expense');
   const [description, setDescription] = useState(transacaoParaEditar ? transacaoParaEditar.description : '');
   const [value, setValue] = useState(transacaoParaEditar ? transacaoParaEditar.value.toString() : '');
-  const [date, setDate] = useState(transacaoParaEditar ? transacaoParaEditar.date : new Date().toISOString().split('T')[0]);
   
+  // Tratamento de Data seguro e livre de bugs de fuso horário
+  const getInitialDate = () => {
+    if (transacaoParaEditar && transacaoParaEditar.date) {
+      const [year, month, day] = transacaoParaEditar.date.split('-');
+      return new Date(year, month - 1, day);
+    }
+    return new Date();
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getInitialDate());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(transacaoParaEditar ? transacaoParaEditar.categoryId : '');
   const [activeTab, setActiveTab] = useState('basic');
@@ -29,11 +41,21 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
     loadCategories();
   }, []);
 
-  // Filtra as categorias com base no tipo selecionado (Receita ou Despesa)
   const displayedCategories = categories.filter(c => type === 'income' ? c.isIncome : !c.isIncome);
 
+  // Formatações manuais seguras para não depender da linguagem do telemóvel
+  const dataFormatadaBR = `${String(selectedDate.getDate()).padStart(2, '0')}/${String(selectedDate.getMonth() + 1).padStart(2, '0')}/${selectedDate.getFullYear()}`;
+  const dataFormatadaAPI = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+
+  const onChangeDate = (event, currentSelectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios'); // iOS mantém aberto, Android fecha sozinho
+    if (currentSelectedDate) {
+      setSelectedDate(currentSelectedDate);
+    }
+  };
+
   async function handleSave() {
-    if (description.trim() === '' || value === '' || date === '' || selectedCategoryId === '') {
+    if (description.trim() === '' || value === '' || selectedCategoryId === '') {
       Alert.alert('Atenção', 'Preencha o valor, a descrição e escolha uma categoria.');
       return;
     }
@@ -50,26 +72,31 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
         await api.delete(`/transactions/${transacaoParaEditar.id}`);
       }
       
-      await api.post('/transactions', {
+      const payload = {
         description, 
         value: valorFormatado, 
-        date, 
+        date: dataFormatadaAPI, // Envia para o servidor no formato YYYY-MM-DD
         categoryId: selectedCategoryId, 
         userId: userId
-      });
+      };
+      
+      await api.post('/transactions', payload);
       
       Alert.alert('Sucesso!', 'Lançamento guardado com sucesso.');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar o lançamento.');
+      console.error("ERRO COMPLETO DO AXIOS:", error.response ? error.response.data : error.message);
+      Alert.alert(
+        'Erro Técnico', 
+        error.response?.data?.message || error.response?.data?.error || error.message || 'Erro desconhecido'
+      );
     }
   }
 
-  // Cores dinâmicas baseadas no tipo
   const getThemeColor = () => {
-    if (type === 'income') return '#10B981'; // Emerald 500
-    if (type === 'expense') return '#F43F5E'; // Rose 500
-    return '#374151'; // Gray 700 (Transfer)
+    if (type === 'income') return '#10B981'; 
+    if (type === 'expense') return '#F43F5E'; 
+    return '#374151'; 
   };
 
   const themeColor = getThemeColor();
@@ -77,7 +104,6 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       
-      {/* CABEÇALHO DINÂMICO */}
       <View style={[styles.header, { backgroundColor: themeColor }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
@@ -105,10 +131,8 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* CORPO DO FORMULÁRIO */}
       <View style={styles.body}>
         
-        {/* SELETOR DE TIPO */}
         <View style={styles.typeSelector}>
           <TouchableOpacity 
             style={[styles.typeBtn, type === 'expense' && styles.typeBtnActiveExpense]}
@@ -124,13 +148,12 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.typeBtn, type === 'transfer' && styles.typeBtnActiveTransfer]}
-            onPress={() => { setType('transfer'); setSelectedCategoryId(''); Alert.alert('Em breve', 'Transferências entre contas chegarão na próxima atualização!'); }}
+            onPress={() => { setType('transfer'); setSelectedCategoryId(''); Alert.alert('Em breve', 'Transferências chegarão na próxima atualização!'); }}
           >
             <Text style={[styles.typeBtnText, type === 'transfer' && styles.typeTextActiveTransfer]}>Transf.</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ABAS */}
         <View style={styles.tabsRow}>
           <TouchableOpacity onPress={() => setActiveTab('basic')} style={[styles.tab, activeTab === 'basic' && styles.tabActive]}>
             <Text style={[styles.tabText, activeTab === 'basic' && styles.tabTextActive]}>Principal</Text>
@@ -157,15 +180,28 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
               </View>
 
               <Text style={styles.label}>DATA</Text>
-              <View style={styles.inputWrapper}>
+              
+              {/* NOVO SELETOR DE DATA BONITO */}
+              <TouchableOpacity 
+                style={styles.inputWrapper} 
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
                 <Calendar size={20} color="#9CA3AF" style={styles.inputIcon} />
-                <TextInput 
-                  style={styles.input}
-                  placeholder="AAAA-MM-DD"
-                  value={date}
-                  onChangeText={setDate}
+                <View style={[styles.input, { justifyContent: 'center' }]}>
+                  <Text style={{ fontSize: 14, color: '#111827' }}>{dataFormatadaBR}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* COMPONENTE NATIVO DO CALENDÁRIO */}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="default"
+                  onChange={onChangeDate}
                 />
-              </View>
+              )}
 
               <View style={styles.categoryHeader}>
                 <Text style={[styles.label, { marginBottom: 0 }]}>{type === 'income' ? 'ORIGEM' : 'CATEGORIA'}</Text>
@@ -191,7 +227,6 @@ export default function GerenciarDespesaScreen({ route, navigation }) {
             </View>
           ) : (
             <View style={styles.formSection}>
-              {/* Opções Visuais do Protótipo (Sem funcionalidade de banco ainda) */}
               <View style={styles.extraOption}>
                 <View style={styles.extraLeft}>
                   <RefreshCcw size={20} color="#6B7280" />
@@ -270,7 +305,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: 'bold', color: '#9CA3AF', letterSpacing: 1, marginLeft: 8 },
   inputWrapper: { position: 'relative', justifyContent: 'center' },
   inputIcon: { position: 'absolute', left: 16, zIndex: 1 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#F3F4F6', padding: 16, paddingLeft: 48, borderRadius: 16, fontSize: 14, color: '#111827', shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#F3F4F6', padding: 16, paddingLeft: 48, borderRadius: 16, height: 52, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
 
   categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   addCategoryText: { fontSize: 14, fontWeight: 'bold', color: '#4F46E5' },

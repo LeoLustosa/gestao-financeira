@@ -9,7 +9,7 @@ async function runSeed() {
   // 1. Verificar se o Professor já existe e limpar dados antigos
   const emailProf = 'professor@teste.com';
   const userExist = await db.get('SELECT id FROM users WHERE email = ?', [emailProf]);
-  
+
   let profId;
   if (userExist) {
     profId = userExist.id;
@@ -51,7 +51,7 @@ async function runSeed() {
   for (const mes of meses) {
     // Receitas
     transacoes.push({ desc: 'Salário Universidade', valor: 8500.00, data: `${ano}-${mes}-05`, cat: categorias[0].id });
-    
+
     // Despesas Fixas / Recorrentes
     transacoes.push({ desc: 'Aluguel', valor: 2200.00, data: `${ano}-${mes}-10`, cat: categorias[1].id });
     transacoes.push({ desc: 'Internet Fibra', valor: 119.90, data: `${ano}-${mes}-15`, cat: categorias[1].id });

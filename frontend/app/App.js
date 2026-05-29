@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, FileText, Target, PieChart, Plus } from 'lucide-react-native'; // <-- Adicionado o Plus!
+import { Home, FileText, Target, PieChart, Plus } from 'lucide-react-native'; 
 
 // IMPORTAÇÕES CORRETAS
 import SplashScreen from './screens/SplashScreen';
@@ -28,12 +28,14 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // --- O BOTÃO FLUTUANTE CENTRAL (+) ---
-const CustomTabBarButton = () => {
+// Agora ele recebe o userId como propriedade (prop)
+const CustomTabBarButton = ({ userId }) => {
   const navigation = useNavigation();
   return (
     <TouchableOpacity
       style={styles.fabContainer}
-      onPress={() => navigation.navigate('GerenciarDespesa')} // Abre o modal por cima de tudo!
+      // Passando o userId aqui!
+      onPress={() => navigation.navigate('GerenciarDespesa', { userId: userId })} 
       activeOpacity={0.8}
     >
       <View style={styles.fabButton}>
@@ -78,12 +80,12 @@ function MainTabs({ route }) {
       <Tab.Screen name="Home" component={ResumoScreen} initialParams={{ userName, userId }} />
       <Tab.Screen name="Extrato" component={TodasDespesasScreen} initialParams={{ userId }} />
       
-      {/* A MÁGICA ACONTECE AQUI: Uma aba falsa que só renderiza o botão flutuante */}
+      {/* A MÁGICA ACONTECE AQUI: Passando o userId para o botão customizado */}
       <Tab.Screen 
         name="Add" 
         component={View} 
         options={{ 
-          tabBarButton: () => <CustomTabBarButton />,
+          tabBarButton: () => <CustomTabBarButton userId={userId} />,
           tabBarLabel: () => null // Esconde o texto desta aba
         }} 
       />
@@ -113,11 +115,11 @@ export default function App() {
         
         {/* A tela de perfil agora será acedida pelo Avatar no Cabeçalho da Home */}
         <Stack.Screen name="Perfil" component={PerfilScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="AddCard" component={AddCardScreen} />
-     <Stack.Screen name="AddGoal" component={AddGoalScreen} />
-      <Stack.Screen name="AddBudget" component={AddBudgetScreen} />
-      <Stack.Screen name="ManageCategories" component={ManageCategoriesScreen} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="AddCard" component={AddCardScreen} />
+        <Stack.Screen name="AddGoal" component={AddGoalScreen} />
+        <Stack.Screen name="AddBudget" component={AddBudgetScreen} />
+        <Stack.Screen name="ManageCategories" component={ManageCategoriesScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

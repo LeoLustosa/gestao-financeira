@@ -1,115 +1,318 @@
 # 📊 FinApp - Sistema de Gestão Financeira Inteligente
 
-Bem-vindo ao **FinApp**, uma aplicação móvel completa de controle e planejamento financeiro pessoal desenvolvida em **React Native (Expo Go)** no Frontend e **Node.js (Express + SQLite)** no Backend.
-
-Este repositório apresenta a solução estruturada para a avaliação prática da unidade curricular, contendo validações robustas com **Zod**, banco de dados relacional e sincronização em tempo real de estados.
+Bem-vindo ao **FinApp**, uma aplicação móvel completa de controle e planejamento financeiro pessoal desenvolvida em **React Native (Expo)** no Frontend e **Node.js (Express + SQLite)** no Backend.
 
 ---
 
-## 🎯 Guia Rápido de Avaliação (Credenciais do Professor)
+## 📁 Estrutura do Projeto
 
-Para proporcionar uma experiência de correção imediata e rica em detalhes visuais, criámos um **mecanismo de "Seed" automático**. Ao rodar o semeador de dados, a conta do avaliador será recheada com **4 meses de histórico financeiro completo (Março, Abril, Maio e Junho de 2026)**, incluindo receitas, despesas recorrentes (Netflix, Spotify, Aluguer), despesas variáveis, cartões cadastrados, metas e orçamentos em andamento.
-
-### 🔑 Dados de Acesso Pré-carregados:
-* ✉️ **E-mail:** `professor@teste.com`
-* 🔑 **Palavra-passe (Senha):** `123456`
+```
+gestao-financeira/
+├── backend/                    # Servidor Node.js + API RESTful
+│   ├── server.js              # Servidor Express com rotas da API
+│   ├── database.js            # Inicialização e conexão do SQLite
+│   ├── seed.js                # Script para popular dados de teste
+│   ├── package.json
+│   └── database.sqlite        # Banco de dados (criado automaticamente)
+│
+├── frontend/
+│   └── app/                   # Aplicação React Native (Expo)
+│       ├── App.js             # Componente raiz
+│       ├── screens/           # Telas da aplicação
+│       ├── components/        # Componentes reutilizáveis
+│       ├── services/          # Serviços (API, etc)
+│       ├── package.json
+│       └── app.json           # Config do Expo
+│
+├── postman/                   # Coleção de testes da API
+├── README.md                  # Este arquivo
+└── .gitignore
+```
 
 ---
 
-## ⚙️ Como Executar o Projeto Passo a Passo (Visão do Avaliador)
+## 🚀 Setup Rápido (3 Passos)
 
-Como este projeto está a ser avaliado através de um **Pull Request**, siga as instruções abaixo para garantir que está a testar a ramificação (*branch*) correta com todas as implementações finais.
+### Pré-requisitos
+- **Node.js** (v18+) e **npm**
+- **Expo CLI** (instale com `npm install -g expo-cli`)
+- Para testar no celular: **Expo Go** app instalado no seu dispositivo
+- **Windows:** Use Git Bash ou PowerShell
 
-### 1. Clonar e Aceder à Branch do PR
-Abra o terminal no seu computador e execute os seguintes comandos:
+### 1️⃣ Clonar o Repositório
+
 ```bash
-# Clone o repositório (substitua pelo link caso ainda não o tenha feito)
 git clone https://github.com/LeoLustosa/gestao-financeira.git
-
-# Aceda à pasta do projeto
 cd gestao-financeira
+```
 
-# Baixe todas as branches e mude para a branch específica deste Pull Request
-git fetch origin
-git checkout feature/dados-reais-e-notificacoes
-2. Configurar e Iniciar o Servidor (Backend)
-O backend gerencia o banco de dados SQLite local e expõe as rotas RESTful para a aplicação.
+### 2️⃣ Configurar e Rodar o Backend
 
-Abra um terminal e navegue até à pasta raiz do servidor.
+Abra um **terminal/PowerShell** e execute:
 
-Instale todos os pacotes necessários:
-
-Bash
+```bash
+cd backend
 npm install
-Executar a Carga de Dados (Seed): Instale os dados simulados do professor rodando o script semeador:
-
-Bash
 node seed.js
-(Deverá ver a mensagem de sucesso: ✅ Dados gerados com sucesso! O professor tem agora 4 meses de histórico riquíssimo.)
-
-Inicie o servidor em modo de desenvolvimento:
-
-Bash
 node server.js
-(O servidor ficará ativo em: http://localhost:3000)
+```
 
-3. Configurar e Iniciar o Aplicativo (Frontend)
-O frontend foi otimizado para rodar de forma nativa no seu telemóvel (celular) físico ou emulador através do Expo Go.
+Você verá:
+```
+✅ Dados gerados com sucesso!
+Servidor rodando na porta http://localhost:3000
+```
 
-Abra um segundo terminal e navegue até à pasta do aplicativo móvel.
+**O servidor fica rodando!** Deixe este terminal aberto e abra um novo para o frontend.
 
-Instale as dependências do ecossistema React Native:
+### 3️⃣ Configurar e Rodar o Frontend
 
-Bash
+Abra um **novo terminal** na pasta raiz:
+
+```bash
+cd frontend/app
 npm install
-🌐 Configuração Crucial de IP (Rede Local):
-Para que o telemóvel físico consiga comunicar com o servidor rodando no seu computador, abra o ficheiro services/api.js no VS Code e ajuste a constante baseURL:
-
-Se testar em Telemóvel Físico (Expo Go): Substitua pelo IP IPv4 local da sua máquina (ex: http://192.168.1.XX:3000). Ambos devem estar no mesmo Wi-Fi.
-
-Se testar em Emulador Android: Descomente a linha correspondente que aponta para o IP padrão do emulador: http://10.0.2.2:3000.
-
-Execute o Metro Bundler limpando o cache para evitar conflitos:
-
-Bash
 npx expo start -c
-Escaneie o QR Code impresso no terminal com a câmara do seu dispositivo (iOS) ou pelo app Expo Go (Android).
+```
 
-💎 Funcionalidades em Destaque na Avaliação
-Ao navegar na aplicação utilizando a conta professor@teste.com, atente para as seguintes regras de negócio implementadas com rigor técnico:
+**Opção A: Testar em Emulador Android**
+- Pressione `a` no terminal para abrir o emulador
 
-1. Dashboard Inteligente (ResumoScreen)
-Cálculo de Saldos Consolidado: O saldo total reflete o histórico global acumulado na base de dados, enquanto os blocos de "Receitas" e "Despesas" mudam dinamicamente com base no mês selecionado no topo do ecrã.
+**Opção B: Testar em Telemóvel Físico**
+1. Baixe o app **Expo Go** (iOS/Android)
+2. Escaneie o QR Code que apareceu no terminal
+3. ⚠️ **Importante:** Ambos (celular e PC) devem estar no **mesmo Wi-Fi**
 
-Próximos Vencimentos Ativos: Varre a tabela de transações procurando despesas do mês selecionado que vencem em datas iguais ou superiores à atual, exibindo alertas visuais detalhados com ícones de calendário.
+**⚠️ Nota Importante (Celular Físico):**
+- Edite `frontend/app/services/api.js`
+- Substitua `baseURL` pelo IP local da sua máquina (ex: `http://192.168.1.100:3000`)
+- Encontre o IP com: `ipconfig` (Windows) ou `ifconfig` (Mac/Linux), procure por "IPv4 Address"
 
-Modo de Privacidade: O ícone do olho no topo oculta/exibe valores monetários de forma reativa em toda a interface utilizando controle de estados locais.
 
-2. Extrato Detalhado (TodasDespesasScreen)
-Filtros por Segmentação (Pills): Permite filtrar dinamicamente a listagem de registros em "Todas", apenas "Receitas" ou apenas "Despesas", acumulados dentro da janela temporal do mês em foco.
+---
 
-Gestão Direta (Long Press): Segurar o dedo sobre qualquer item do extrato dispara um menu contextual nativo que permite disparar a edição ou exclusão do registro na base de dados com atualização imediata em tela.
+## 🔑 Credenciais de Teste
 
-3. Planeamento Avançado (PlanningScreen)
-Orçamentos Automatizados: Ao listar os orçamentos (ex: Mercado), o backend executa uma consulta relacional complexa agregando a soma de despesas reais feitas pelo usuário naquela categoria específica durante o mês em vigor. A barra de progresso altera de cor (Emerald para Rose) se os gastos ultrapassarem 90% do limite predefinido.
+**Conta pré-carregada com 4 meses de histórico completo:**
 
-Ecrã de Novos Cadastros: Telas dedicadas para adicionar novos Cartões de Crédito, Metas de Poupança e Limites de Orçamento, todos devidamente tipados e persistidos no SQLite com ID único gerado de forma segura via Node crypto.randomUUID().
+```
+📧 E-mail: professor@teste.com
+🔑 Senha: 123456
+```
 
-4. Customização Total de Categorias
-Através da aba Perfil -> Categorias e Tags, o professor pode visualizar a listagem completa de categorias.
+---
 
-O utilizador tem a liberdade de criar novas categorias, estipulando se é uma Receita ou Despesa, selecionando o nome, uma cor da paleta e vinculando um ícone nativo da biblioteca lucide-react-native. A nova categoria fica disponível para uso imediato no formulário de lançamentos.
+## 💎 Funcionalidades Principais
 
-5. Central de Notificações Integrada
-O clique no botão do Sino no cabeçalho redireciona para uma central rica com categorização de avisos em níveis de severidade (Success, Warning, Info). Conta com suporte a ações em lote para marcar como lidas ou limpar o painel.
+### Dashboard Inteligente (Resumo)
+- Saldo consolidado e histórico acumulado
+- Filtro dinâmico por mês
+- Modo privacidade (ocultar valores)
+- Próximos vencimentos com alertas
 
-🛠️ Tecnologias e Boas Práticas Empregadas
-React Native & Expo (SDK 51): Interface nativa performática baseada em componentes funcionais e Hooks (useState, useEffect).
+### Extrato Detalhado
+- Filtros por tipo (Todas, Receitas, Despesas)
+- Gestão direta (editar/deletar com long press)
+- Busca e segmentação por período
 
-Navigation Context Component Isolation: Atualização limpa de dados ao navegar entre telas utilizando ouvintes de foco (navigation.addListener('focus')) para contornar problemas de cache de renderização.
+### Planejamento Avançado
+- **Orçamentos:** Limite por categoria com barra de progresso
+- **Metas de Poupança:** Rastreie seus objetivos financeiros
+- **Cartões:** Gerencie múltiplos cartões de crédito
+- **Customização:** Crie suas próprias categorias
 
-Zod Validation Schema: Proteção de borda no backend contra payloads maliciosos ou nulos em transações, categorias e utilizadores.
+### Central de Notificações
+- Alertas de gastos excessivos
+- Categorização por severidade
+- Ações em lote
 
-Axios Interceptors Context: Isolamento das configurações de rede centralizadas em uma única instância reutilizável.
+---
 
-SQLite Relational Design: Tabelas normalizadas com restrições de chaves estrangeiras (FOREIGN KEY) assegurando integridade referencial robusta de dados de múltiplos usuários.
+## 🛠️ Tecnologias Utilizadas
+
+**Backend:**
+- Node.js + Express.js
+- SQLite (banco de dados relacional)
+- Zod (validação de dados)
+- CORS habilitado
+
+**Frontend:**
+- React Native + Expo SDK 54
+- React Navigation (bottom tabs + stack)
+- Axios (requisições HTTP)
+- Lucide React Native (ícones)
+- date-fns (manipulação de datas)
+
+---
+
+## 📋 Comandos Úteis
+
+### Backend
+
+```bash
+cd backend
+
+# Instalar dependências
+npm install
+
+# Rodar com hot-reload
+npm run dev
+
+# Executar seed (dados de teste)
+node seed.js
+
+# Iniciar servidor
+node server.js
+```
+
+### Frontend
+
+```bash
+cd frontend/app
+
+# Instalar dependências
+npm install
+
+# Iniciar com cache limpo
+npx expo start -c
+
+# Rodar direto no Android
+npx expo start --android
+
+# Rodar direto no iOS
+npx expo start --ios
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Backend não inicia?
+
+```bash
+# 1. Verifique se a porta 3000 está em uso
+# Windows:
+netstat -ano | findstr :3000
+
+# 2. Mate o processo (Windows):
+taskkill /PID <PID> /F
+
+# 3. Limpe cache:
+npm cache clean --force
+
+# 4. Reinstale dependências:
+rm -r node_modules package-lock.json
+npm install
+```
+
+### "Cannot find module" no frontend?
+
+```bash
+# Limpe e reinstale:
+cd frontend/app
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Expo não inicializa?
+
+```bash
+# Limpe cache do Expo:
+npx expo start -c
+
+# Se ainda não funcionar:
+npm uninstall -g expo-cli
+npm install -g expo-cli@latest
+```
+
+### "Conexão recusada" ao testar API no celular?
+
+**Se usar emulador Android:**
+- A URL já está correta: `http://10.0.2.2:3000`
+
+**Se usar celular físico:**
+- Edite `frontend/app/services/api.js`
+- Encontre o IP da sua máquina:
+  ```bash
+  # Windows:
+  ipconfig | findstr "IPv4"
+  
+  # Mac/Linux:
+  ifconfig | grep "inet "
+  ```
+- Substitua na linha 9 (ex: `http://192.168.1.100:3000`)
+- Certifique-se que ambos estão no **mesmo Wi-Fi**
+
+### Seed.js não gera dados?
+
+```bash
+# Delete o banco de dados antigo:
+cd backend
+rm database.sqlite
+
+# Execute seed novamente:
+node seed.js
+
+# Inicie o servidor:
+node server.js
+```
+
+### "Permission denied" ou "Device busy"?
+
+- Feche todos os terminais e IDEs
+- Reinicie o Windows
+- Tente novamente
+
+---
+
+## 📚 Documentação da API
+
+A API está totalmente funcional em `http://localhost:3000`. Endpoints principais:
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/register` | Criar nova conta |
+| POST | `/login` | Login de usuário |
+| GET | `/transactions` | Listar transações do usuário |
+| POST | `/transactions` | Criar transação |
+| GET | `/categories` | Listar categorias |
+| POST | `/categories` | Criar categoria |
+| GET | `/budgets` | Listar orçamentos |
+| POST | `/budgets` | Criar orçamento |
+| GET | `/goals` | Listar metas |
+| POST | `/goals` | Criar meta |
+| GET | `/cards` | Listar cartões |
+| POST | `/cards` | Adicionar cartão |
+
+---
+
+## ✅ Verificação Final
+
+- [x] Backend rodando em http://localhost:3000
+- [x] Frontend rodando via Expo
+- [x] Seed de dados executado
+- [x] Login funcionando com `professor@teste.com / 123456`
+- [x] Transações, orçamentos e metas visíveis no dashboard
+
+---
+
+## 📝 Notas Importantes
+
+1. **Banco de dados:** SQLite armazenado em `backend/database.sqlite` (local)
+2. **Segurança:** Este é um projeto educacional. Senhas não são criptografadas
+3. **Dados de teste:** Execute `seed.js` sempre que desejar resetar os dados
+4. **Modo desenvolvimento:** Todos os logs estão habilitados para debugging
+
+---
+
+## 📞 Suporte
+
+Se encontrar problemas:
+1. Verifique os pré-requisitos (Node.js, Expo)
+2. Limpe cache: `npm cache clean --force`
+3. Reinstale dependências: `rm -rf node_modules && npm install`
+4. Consulte os logs no terminal para mensagens de erro detalhadas
+
+---
+
+**Desenvolvido com ❤️ para avaliação de Gestão Financeira**

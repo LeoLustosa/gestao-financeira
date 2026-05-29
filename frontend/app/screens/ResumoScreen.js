@@ -45,28 +45,27 @@ export default function ResumoScreen({ route, navigation }) {
   }
 
   // Função segura para formatar dinheiro no telemóvel
-  // Função segura e bonita para formatar dinheiro (ex: R$ 18.101,08)
   const formatCurrency = (value) => {
     const num = Number(value) || 0;
     return 'R$ ' + num.toFixed(2)
       .replace('.', ',')
       .replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
   };
-  // --- CÁLCULOS FINANCEIROS ---
 
-  // 1. Saldo Total Global (A simular a conta bancária inteira)
+  // --- CÁLCULOS FINANCEIROS (CORRIGIDOS PARA O NOVO FORMATO DE DATA) ---
   const totalBalance = transactions.reduce((acc, curr) => {
     return curr.category?.isIncome ? acc + curr.value : acc - curr.value;
   }, 0);
 
-  // 2. Filtra transações apenas do mês visível
+  // 1. Filtra as transações do mês usando objetos Date para ser mais seguro
   const transacoesDoMes = transactions.filter(t => {
     if (!t.date) return false;
-    const [anoT, mesT] = t.date.split('-'); 
-    return parseInt(anoT) === anoAtual && parseInt(mesT) === (currentDate.getMonth() + 1);
+    // O backend agora envia 'YYYY-MM-DD' de forma limpa.
+    const dateObj = new Date(t.date);
+    return dateObj.getFullYear() === anoAtual && dateObj.getMonth() === currentDate.getMonth();
   });
 
-  // 3. Receitas e Despesas do mês
+  // 2. Receitas e Despesas
   let totalIncome = 0;
   let totalExpense = 0;
   transacoesDoMes.forEach(t => {
@@ -74,19 +73,36 @@ export default function ResumoScreen({ route, navigation }) {
     else totalExpense += t.value;
   });
 
-  // 4. Próximos Vencimentos (Despesas do mês atual que vencem a partir de hoje)
-  const diaHoje = new Date().getDate(); // Pega o dia real atual
+  // 3. Próximos Vencimentos (Apenas despesas futuras do mês atual)
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+  
   const proximosVencimentos = transacoesDoMes
-    .filter(t => !t.category?.isIncome && parseInt(t.date.split('-')[2]) >= diaHoje)
-    .sort((a, b) => parseInt(a.date.split('-')[2]) - parseInt(b.date.split('-')[2])) // Ordena do mais próximo ao mais distante
-    .slice(0, 2); // Pega apenas os 2 próximos para não quebrar o design
+    .filter(t => {
+      if (t.category?.isIncome) return false; // Só despesas
+      const dataTransacao = new Date(t.date);
+      dataTransacao.setHours(0,0,0,0);
+      // É próximo vencimento SE for hoje ou no futuro (e já sabemos que é deste mês pelo filtro acima)
+      return dataTransacao >= hoje;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date)) // Ordena pela data
+    .slice(0, 2); 
 
-  // Pegar a inicial do nome para o Avatar (ex: João Pedro -> JP)
+  // Pegar a inicial do nome para o Avatar
   const getInitials = (name) => {
     const parts = name.trim().split(' ');
     if (parts.length > 1) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
   };
+
+  // Função para extrair o dia de forma segura para exibição
+  const getDaySafely = (dateString) => {
+      if(!dateString) return '';
+      // Garante que pega a parte do dia se vier 'YYYY-MM-DD'
+      const parts = dateString.split('-');
+      if(parts.length >= 3) return parts[2].substring(0,2); // substring para o caso de vir hora agarrada
+      return '';
+  }
 
   if (loading && transactions.length === 0) {
     return <View style={styles.loader}><ActivityIndicator size="large" color="#4F46E5" /></View>;
@@ -165,7 +181,7 @@ export default function ResumoScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* ALERTA (Fixo como no protótipo por enquanto) */}
+        {/* ALERTA */}
         <View style={styles.alertBox}>
           <AlertCircle size={20} color="#F97316" style={{ marginTop: 2 }} />
           <View style={{ flex: 1, marginLeft: 12 }}>
@@ -174,7 +190,7 @@ export default function ResumoScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* PRÓXIMOS VENCIMENTOS (Dinâmico) */}
+        {/* PRÓXIMOS VENCIMENTOS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Próximos Vencimentos</Text>
@@ -195,7 +211,7 @@ export default function ResumoScreen({ route, navigation }) {
                   <View>
                     <Text style={styles.txDesc}>{conta.description}</Text>
                     <Text style={[styles.txCat, { color: '#EA580C', fontWeight: '500' }]}>
-                      Vence dia {conta.date.split('-')[2]}
+                      Vence dia {getDaySafely(conta.date)}
                     </Text>
                   </View>
                 </View>
@@ -205,7 +221,7 @@ export default function ResumoScreen({ route, navigation }) {
           )}
         </View>
 
-        {/* LANÇAMENTOS DO MÊS (Da base de dados) */}
+        {/* LANÇAMENTOS DO MÊS */}
         <View style={[styles.section, { paddingBottom: 30 }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Lançamentos do Mês</Text>
@@ -217,19 +233,18 @@ export default function ResumoScreen({ route, navigation }) {
           {transacoesDoMes.length === 0 ? (
             <View style={styles.emptyBox}>
               <Calendar size={32} color="#D1D5DB" style={{ marginBottom: 8 }} />
-              <Text style={styles.emptyText}>Nenhum lançamento previsto.</Text>
+              <Text style={styles.emptyText}>Nenhum lançamento registrado.</Text>
             </View>
           ) : (
             transacoesDoMes.slice(0, 4).map((tx) => (
               <View key={tx.id} style={styles.txRow}>
                 <View style={styles.txLeft}>
                   <View style={[styles.txIconBg, { backgroundColor: tx.category?.isIncome ? '#D1FAE5' : '#FFE4E6' }]}>
-                    {/* Placeholder Ícone genérico */}
                     {tx.category?.isIncome ? <ArrowUpRight size={20} color="#10B981"/> : <ArrowDownRight size={20} color="#F43F5E"/>}
                   </View>
                   <View>
                     <Text style={styles.txDesc} numberOfLines={1}>{tx.description}</Text>
-                    <Text style={styles.txCat}>{tx.category?.displayName} • {tx.date.split('-')[2]} {mesAtual.substring(0,3)}</Text>
+                    <Text style={styles.txCat}>{tx.category?.displayName} • {getDaySafely(tx.date)} {mesAtual.substring(0,3)}</Text>
                   </View>
                 </View>
                 <Text style={[styles.txValue, { color: tx.category?.isIncome ? '#10B981' : '#111827' }]}>
@@ -239,7 +254,6 @@ export default function ResumoScreen({ route, navigation }) {
             ))
           )}
         </View>
-
       </ScrollView>
     </View>
   );
@@ -248,9 +262,8 @@ export default function ResumoScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40 }, // Retornado ao original pois o FAB extra foi removido
   
-  // Header
   header: { backgroundColor: '#4F46E5', paddingTop: 60, paddingBottom: 60, paddingHorizontal: 24, borderBottomLeftRadius: 40, borderBottomRightRadius: 40 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
   userInfo: { flexDirection: 'row', alignItems: 'center' },
@@ -266,14 +279,12 @@ const styles = StyleSheet.create({
   eyeBtn: { padding: 4 },
   balanceValue: { fontSize: 36, fontWeight: 'bold', color: '#fff', tracking: -1 },
 
-  // Navegador Meses
   monthNavigator: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 8, borderRadius: 24, marginHorizontal: 24, marginTop: -28, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: '#F3F4F6' },
   monthBtn: { padding: 8 },
   monthCenter: { alignItems: 'center' },
   monthName: { fontSize: 14, fontWeight: 'bold', color: '#111827', textTransform: 'capitalize' },
   yearName: { fontSize: 10, fontWeight: '500', color: '#9CA3AF' },
 
-  // Cards
   cardsRow: { flexDirection: 'row', paddingHorizontal: 24, marginTop: 24, gap: 16 },
   card: { flex: 1, backgroundColor: '#fff', padding: 16, borderRadius: 24, borderWidth: 1, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 5, elevation: 1 },
   cardIncome: { borderColor: 'rgba(16, 185, 129, 0.2)' },
@@ -285,12 +296,10 @@ const styles = StyleSheet.create({
   incomeValue: { fontSize: 20, fontWeight: 'bold', color: '#10B981' },
   expenseValue: { fontSize: 20, fontWeight: 'bold', color: '#F43F5E' },
 
-  // Alerta
   alertBox: { flexDirection: 'row', backgroundColor: '#FFF7ED', padding: 16, borderRadius: 16, marginHorizontal: 24, marginTop: 24, borderWidth: 1, borderColor: '#FFEDD5' },
   alertTitle: { fontSize: 14, fontWeight: 'bold', color: '#9A3412' },
   alertDesc: { fontSize: 12, color: '#C2410C', marginTop: 4, lineHeight: 18 },
 
-  // Seções (Listas)
   section: { marginHorizontal: 24, marginTop: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
@@ -299,7 +308,6 @@ const styles = StyleSheet.create({
   billBox: { backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6' },
   emptyText: { fontSize: 14, color: '#9CA3AF' },
   
-  // Item de Transação
   txRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 8, borderWidth: 1, borderColor: '#F9FAFB' },
   txLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 },
   txIconBg: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
