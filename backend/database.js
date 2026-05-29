@@ -11,7 +11,7 @@ async function getDbConnection() {
 async function initDatabase() {
   const db = await getDbConnection();
 
-  // 1. Cria a Tabela de Utilizadores (NOVIDADE)
+  // 1. Cria a Tabela de Utilizadores
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -33,7 +33,7 @@ async function initDatabase() {
     );
   `);
 
-  // 3. Cria a Tabela de Transações (AGORA COM O DONO!)
+  // 3. Cria a Tabela de Transações
   await db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (
       id TEXT PRIMARY KEY,
@@ -41,24 +41,13 @@ async function initDatabase() {
       value REAL NOT NULL,
       date TEXT NOT NULL,
       categoryId TEXT,
-      userId TEXT, -- O ID do utilizador dono desta transação
+      userId TEXT,
       FOREIGN KEY (categoryId) REFERENCES categories(id),
       FOREIGN KEY (userId) REFERENCES users(id)
     );
   `);
 
-  // Seed das Categorias Padrão
-  const count = await db.get('SELECT COUNT(*) as count FROM categories');
-  if (count.count === 0) {
-    await db.exec(`
-      INSERT INTO categories (id, name, displayName, icon, background, isIncome) VALUES
-      ('income', 'income', 'Receita', 'arrow-upward', '#C8E6C9', 1),
-      ('food', 'food', 'Alimentação', 'restaurant', '#FFCDD2', 0),
-      ('transport', 'transport', 'Transporte', 'directions-car', '#BBDEFB', 0),
-      ('leisure', 'leisure', 'Lazer', 'sports-esports', '#E1BEE7', 0),
-      ('others', 'others', 'Outros', 'category', '#D7CCC8', 0);
-    `);
-    // 4. Cria a Tabela de Cartões de Crédito
+  // 4. Cria a Tabela de Cartões de Crédito
   await db.exec(`
     CREATE TABLE IF NOT EXISTS cards (
       id TEXT PRIMARY KEY,
@@ -84,7 +73,8 @@ async function initDatabase() {
       FOREIGN KEY (userId) REFERENCES users(id)
     );
   `);
-// 6. Cria a Tabela de Orçamentos (Budgets)
+
+  // 6. Cria a Tabela de Orçamentos (Budgets)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS budgets (
       id TEXT PRIMARY KEY,
@@ -96,7 +86,18 @@ async function initDatabase() {
       FOREIGN KEY (userId) REFERENCES users(id)
     );
   `);
-  
+
+  // Seed das Categorias Padrão
+  const count = await db.get('SELECT COUNT(*) as count FROM categories');
+  if (count.count === 0) {
+    await db.exec(`
+      INSERT INTO categories (id, name, displayName, icon, background, isIncome) VALUES
+      ('income', 'income', 'Receita', 'arrow-upward', '#C8E6C9', 1),
+      ('food', 'food', 'Alimentação', 'restaurant', '#FFCDD2', 0),
+      ('transport', 'transport', 'Transporte', 'directions-car', '#BBDEFB', 0),
+      ('leisure', 'leisure', 'Lazer', 'sports-esports', '#E1BEE7', 0),
+      ('others', 'others', 'Outros', 'category', '#D7CCC8', 0);
+    `);
     console.log('Banco de dados inicializado com as 5 categorias padrão!');
   }
 

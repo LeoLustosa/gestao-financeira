@@ -26,8 +26,8 @@ const transactionSchema = z.object({
   description: z.string().min(1, "A descrição não pode estar vazia"),
   value: z.number().positive("O valor deve ser positivo"),
   date: z.string(),
-  categoryId: z.string(), // <--- A VÍRGULA QUE FALTAVA ESTAVA AQUI!
-  userId: z.string()      // <--- Agora exige o ID do dono!
+  categoryId: z.string(),
+  userId: z.string()
 });
 
 // Requisito: Validação de Utilizadores
@@ -61,7 +61,7 @@ app.post('/categories', async (req, res) => {
 });
 
 app.put('/categories/:id', async (req, res) => {
-  const { displayName } = req.body; 
+  const { displayName } = req.body;
   if (!displayName) return res.status(400).json({ error: "displayName é obrigatório" });
   const db = await getDbConnection();
   await db.run('UPDATE categories SET displayName = ? WHERE id = ?', [displayName, req.params.id]);
@@ -83,15 +83,14 @@ app.delete('/categories/:id', async (req, res) => {
 
 // Requisito 8: Listar transações (AGORA FILTRA POR UTILIZADOR!)
 app.get('/transactions', async (req, res) => {
-  const { userId } = req.query; // Pega o ID que vem na URL do celular
-  
+  const { userId } = req.query;
+
   if (!userId) {
     return res.status(400).json({ error: "É necessário informar o utilizador." });
   }
 
   const db = await getDbConnection();
-  
-  // CORRIGIDO: Busca apenas as transações deste utilizador específico
+
   const transactions = await db.all('SELECT * FROM transactions WHERE userId = ?', [userId]);
   const categories = await db.all('SELECT * FROM categories');
 
@@ -102,24 +101,23 @@ app.get('/transactions', async (req, res) => {
       category: cat ? { ...cat, isIncome: cat.isIncome === 1 } : null
     };
   });
-  
+
   res.json(formattedTransactions);
 });
 
-// Requisito 7: Criar transação (AGORA GRAVA O DONO NO BANCO!)
+// Requisito 7: Criar transação
 app.post('/transactions', async (req, res) => {
   try {
     const data = transactionSchema.parse(req.body);
     const db = await getDbConnection();
-    
+
     const category = await db.get('SELECT * FROM categories WHERE id = ?', [data.categoryId]);
     if (!category) {
       return res.status(400).json({ error: "Categoria não encontrada" });
     }
 
     const newId = crypto.randomUUID();
-    
-    // CORRIGIDO: Agora tem 6 pontos de interrogação e salva o data.userId
+
     await db.run(`
       INSERT INTO transactions (id, description, value, date, categoryId, userId)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -155,7 +153,7 @@ app.post('/register', async (req, res) => {
   try {
     const data = userSchema.parse(req.body);
     const db = await getDbConnection();
-    
+
     const userExists = await db.get('SELECT * FROM users WHERE email = ?', [data.email]);
     if (userExists) {
       return res.status(400).json({ error: "Este e-mail já está registado." });
@@ -192,6 +190,7 @@ app.post('/login', async (req, res) => {
     user: { id: user.id, name: user.name, email: user.email }
   });
 });
+
 // --- ROTAS DE CARTÕES DE CRÉDITO ---
 app.get('/cards', async (req, res) => {
   const { userId } = req.query;
@@ -206,12 +205,12 @@ app.post('/cards', async (req, res) => {
     const { name, limit_amount, network, color, userId } = req.body;
     const db = await getDbConnection();
     const newId = crypto.randomUUID();
-    
+
     await db.run(`
       INSERT INTO cards (id, name, limit_amount, used_amount, network, color, userId)
       VALUES (?, ?, ?, 0, ?, ?, ?)
     `, [newId, name, limit_amount, network, color, userId]);
-    
+
     res.status(201).json({ message: "Cartão adicionado com sucesso!" });
   } catch (error) {
     res.status(500).json({ error: "Erro ao salvar cartão." });
@@ -232,54 +231,52 @@ app.post('/goals', async (req, res) => {
     const { name, target_amount, current_amount, color, userId } = req.body;
     const db = await getDbConnection();
     const newId = crypto.randomUUID();
-    
+
     await db.run(`
       INSERT INTO goals (id, name, target_amount, current_amount, color, userId)
       VALUES (?, ?, ?, ?, ?, ?)
     `, [newId, name, target_amount, current_amount || 0, color, userId]);
-    
+
     res.status(201).json({ message: "Meta criada com sucesso!" });
   } catch (error) {
     res.status(500).json({ error: "Erro ao salvar meta." });
   }
 });
+
 // --- ROTAS DE ORÇAMENTOS ---
 app.get('/budgets', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: "userId obrigatório." });
-  
-  const db = await getDbConnection();
-  
-  // 1. Busca todos os orçamentos do usuário
-  const budgets = await db.all('SELECT * FROM budgets WHERE userId = ?', [userId]);
-  
-  // 2. Descobre o mês e ano atual para filtrar os gastos
-  const now = new Date();
-  const currentMonth = String(now.getMonth() + 1).padStart(2, '0'); // ex: "05"
-  const currentYear = String(now.getFullYear()); // ex: "2026"
-  const monthPattern = `${currentYear}-${currentMonth}-%`; // Filtro SQL para o mês ex: "2026-05-%"
 
-  // 3. Para cada orçamento, calcula o quanto já foi gasto no mês real
+  const db = await getDbConnection();
+
+  const budgets = await db.all('SELECT * FROM budgets WHERE userId = ?', [userId]);
+
+  const now = new Date();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYear = String(now.getFullYear());
+  const monthPattern = `${currentYear}-${currentMonth}-%`;
+
   const updatedBudgets = await Promise.all(budgets.map(async (budget) => {
-    // Soma os valores das transações que NÃO são receitas, pertencem ao usuário e combinam com a categoria do orçamento
     const result = await db.get(`
-      SELECT SUM(t.value) as total_spent 
+      SELECT SUM(t.value) as total_spent
       FROM transactions t
       JOIN categories c ON t.categoryId = c.id
-      WHERE t.userId = ? 
-        AND c.displayName LIKE ? 
+      WHERE t.userId = ?
+        AND c.displayName LIKE ?
         AND c.isIncome = 0
         AND t.date LIKE ?
     `, [userId, budget.category, monthPattern]);
 
     return {
       ...budget,
-      spent_amount: result.total_spent || 0 // Se for nulo, vira 0
+      spent_amount: result.total_spent || 0
     };
   }));
 
   res.json(updatedBudgets);
 });
+
 app.post('/budgets', async (req, res) => {
   try {
     const { category, limit_amount, color, userId } = req.body;
@@ -296,29 +293,25 @@ app.post('/budgets', async (req, res) => {
     res.status(500).json({ error: "Erro ao salvar orçamento." });
   }
 });
+
 // --- ROTAS DE PERFIL DO UTILIZADOR ---
 
-// 1. Buscar os dados do utilizador
 app.get('/users/:id', async (req, res) => {
   const db = await getDbConnection();
-  // Busca o utilizador, mas NUNCA devolve a password por segurança
   const user = await db.get('SELECT id, name, email FROM users WHERE id = ?', [req.params.id]);
-  
+
   if (!user) return res.status(404).json({ error: "Utilizador não encontrado." });
   res.json(user);
 });
 
-// 2. Atualizar o perfil do utilizador
 app.put('/users/:id', async (req, res) => {
   const { name, password } = req.body;
   const db = await getDbConnection();
-  
+
   try {
     if (password && password.trim() !== '') {
-      // Se a pessoa digitou uma password nova, atualizamos tudo
       await db.run('UPDATE users SET name = ?, password = ? WHERE id = ?', [name, password, req.params.id]);
     } else {
-      // Se a password veio vazia, atualizamos apenas o nome
       await db.run('UPDATE users SET name = ? WHERE id = ?', [name, req.params.id]);
     }
     res.json({ message: "Perfil atualizado com sucesso!" });
